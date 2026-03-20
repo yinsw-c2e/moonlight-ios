@@ -119,12 +119,18 @@ static NSMutableSet* hostList;
 - (void)disableUpButton {
 #if !TARGET_OS_TV
     [self->_upButton setTitle:nil];
+    if (@available(iOS 26.0, *)) {
+        [self->_upButton setHidden:YES];
+    }
 #endif
 }
 
 - (void)enableUpButton {
 #if !TARGET_OS_TV
     [self->_upButton setTitle:@"Select New Host"];
+    if (@available(iOS 26.0, *)) {
+        [self->_upButton setHidden:NO];
+    }
 #endif
 }
 
@@ -1104,11 +1110,17 @@ static NSMutableSet* hostList;
     
     [self.navigationController setNavigationBarHidden:NO animated:YES];
     
-    // Hide 1px border line
-    UIImage* fakeImage = [[UIImage alloc] init];
-    [self.navigationController.navigationBar setShadowImage:fakeImage];
-    [self.navigationController.navigationBar setBackgroundImage:fakeImage forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
-    
+    if (@available(iOS 26.0, *)){
+        self.navigationController.navigationBar.translucent=YES;
+        self.navigationController.navigationBar.backgroundColor=[UIColor clearColor];
+        self.navigationController.navigationBar.barTintColor=[UIColor clearColor];
+    }else{
+        // Hide 1px border line
+        UIImage* fakeImage = [[UIImage alloc] init];
+        [self.navigationController.navigationBar setShadowImage:fakeImage];
+        [self.navigationController.navigationBar setBackgroundImage:fakeImage forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
+    }
+
     // Check for a pending shortcut action when appearing
     [self handlePendingShortcutAction];
     
