@@ -1,0 +1,70 @@
+name: Build unsigned Moonlight IPA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/build-unsigned-ipa.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build-ipa:
+    name: Build unsigned iPhone IPA
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source and submodules
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Resolve Swift packages
+        run: |
+          xcodebuild \
+            -resolvePackageDependencies \
+            -project Moonlight.xcodeproj \
+            -scheme Moonlight
+
+      - name: Build unsigned device app
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DERIVED_DATA="$RUNNER_TEMP/DerivedData"
+
+          xcodebuild \
+            -project Moonlight.xcodeproj \
+            -scheme Moonlight \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            DEVELOPMENT_TEAM='' \
+            clean build
+
+          APP_PATH="$DERIVED_DATA/Build/Products/Release-iphoneos/Moonlight.app"
+          test -d "$APP_PATH"
+
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/Moonlight.app"
+          ditto \
+            -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/ipa/Payload" \
+            "$GITHUB_WORKSPACE/Moonlight-Axixi-unsigned.ipa"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: Moonlight-Axixi-unsigned-IPA
+          path: Moonlight-Axixi-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
